@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="RSVP_App.LoginPage"
+             Title="LoginPage">
+    <VerticalStackLayout>
+        <Label 
+            Text="RSVP Handler"
+            HorizontalOptions="Center" />
+        <Label
+            Text="Will Hughes"
+            HorizontalOptions="Center" />
+        <Label
+            Text="Username or Email" />
+        <Entry
+            x:Name="usernameEntry"
+            Placeholder="Enter your username or email" />
+        <Label
+            Text="Password" />
+        <Entry
+            x:Name="passwordEntry"
+            Placeholder="Enter your password"
+            IsPassword="True" />
+        <Button
+            Text="Login"
+            Clicked="OnLoginClicked" />
+        
+        <Label
+            Text="Don't have an account? Sign up!"
+            HorizontalOptions="Center" />
+        <Button
+            Text="Sign Up"
+            Clicked="OnCreateAccountClicked" />
+        <Button
+            Text="Continue as Guest"
+            Clicked="OnGuestLoginClicked" />
+
+
+    </VerticalStackLayout>
+</ContentPage>
