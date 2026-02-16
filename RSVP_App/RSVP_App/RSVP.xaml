@@ -3,10 +3,75 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="RSVP_App.RSVP"
              Title="RSVP">
-    <VerticalStackLayout>
-        <Label 
-            Text="UNDER CONSTRUCTION"
-            VerticalOptions="Center" 
-            HorizontalOptions="Center" />
-    </VerticalStackLayout>
+
+    <Grid Padding="16" RowDefinitions="Auto,*,Auto" RowSpacing="12">
+
+        <!-- Header -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto, *,Auto">
+            <Button Text="Cancel"
+                    Padding="14,8"
+                    CornerRadius="10"
+                    Clicked="OnCancelClicked" />
+            <Label Grid.Column="1"
+                   Text="RSVP"
+                   FontSize="22"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center" />
+
+            <Button Grid.Column="2"
+                    Text="Save"
+                    Padding="14,8"
+                    CornerRadius="10"
+                    Clicked="OnSaveClicked" />
+        </Grid>
+
+        <!-- Event Summary -->
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="12">
+
+                <Frame Padding="14" CornerRadius="14" HasShadow="True">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="{Binding TitleText}" FontSize="20" FontAttributes="Bold" />
+
+                        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="8">
+                            <Label Text="When:" FontSize="16" TextColor="Gray" />
+                            <Label Grid.Column="1" Text="{Binding WhenText}" />
+
+                            <Label Grid.Row="1" Text="Where:" TextColor="Gray" />
+                            <Label Grid.Row="1" Grid.Column="1" Text="{Binding Location}"  />
+
+                            <Label Grid.Row="2" Text="Host:" TextColor="Gray" />
+                            <Label Grid.Row="2" Grid.Column="1" Text="{Binding HostName}"  />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <Frame Padding="14" CornerRadius="14" HasShadow="True">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="Description" FontSize="18" FontAttributes="Bold" />
+                        <Label Text="{Binding Description}" />
+                    </VerticalStackLayout>
+                </Frame>
+
+                <Frame Padding="14" CornerRadius="14" HasShadow="True">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="RSVP" FontSize="18" FontAttributes="Bold" />
+
+                        <Label Text="Response" />
+                        <Picker ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding SelectedStatusIndex}" />
+
+                        <Label Text="Party Size" />
+                        <Entry Placeholder="1"
+                               Keyboard="Numeric"
+                               Text="{Binding PartySize}" />
+
+                        <Label Text="Notes" />
+                        <Editor Placeholder="Any additional info..." Text="{Binding Notes}" AutoSize="TextChanges" />
+                    </VerticalStackLayout>
+                </Frame>
+            </VerticalStackLayout>
+        </ScrollView>
+
+    </Grid>
 </ContentPage>

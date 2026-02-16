@@ -5,8 +5,11 @@
              Title="ProfilePage">
     <VerticalStackLayout>
         <Label 
-            Text="UNDER CONSTRUCTION"
+            Text="Profile"
             VerticalOptions="Center" 
             HorizontalOptions="Center" />
+        <Label
+            Text="Username" />
+
     </VerticalStackLayout>
 </ContentPage>

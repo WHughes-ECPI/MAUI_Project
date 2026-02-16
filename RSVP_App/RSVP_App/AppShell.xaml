@@ -6,9 +6,15 @@
     xmlns:local="clr-namespace:RSVP_App"
     Title="RSVP_App">
 
+    <!-- Startup Page -->
     <ShellContent
-        Title="Login"
-        ContentTemplate="{DataTemplate local:LoginPage}"
-        Route="LoginPage" />
-
+        Route="login"
+        ContentTemplate="{DataTemplate local:LoginPage}" />
+    
+    <!-- Main Page -->
+        <ShellContent
+        Title="Event List"
+        ContentTemplate="{DataTemplate local:EventListPage}"
+        Route="events" />
+    
 </Shell>

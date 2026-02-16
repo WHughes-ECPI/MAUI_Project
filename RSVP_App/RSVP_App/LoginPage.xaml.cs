@@ -25,7 +25,7 @@ public partial class LoginPage : ContentPage
 		bool isAuthenticated = await AuthenticateUser(username, password);
 		if (isAuthenticated)
 		{
-			await Shell.Current.GoToAsync("mainpage");
+			await Shell.Current.GoToAsync("//events");
 		}
 		else
 		{
@@ -33,10 +33,16 @@ public partial class LoginPage : ContentPage
 		}
 	}
 
-	private async void OnGuestLoginClicked(object sender, EventArgs e)
+	private Task<bool> AuthenticateUser(string username, string password)
+	{
+		return Task.FromResult(username.Trim().ToLower() == "hughes" && password == "Password1");
+
+    }
+
+    private async void OnGuestLoginClicked(object sender, EventArgs e)
 	{
 		AppSession.LoginAsGuest();
-		await Shell.Current.GoToAsync("mainpage");
+		await Shell.Current.GoToAsync("//events/eventlist");
     }
 
 }
