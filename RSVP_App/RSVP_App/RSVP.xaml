@@ -54,6 +54,18 @@
                     </VerticalStackLayout>
                 </Frame>
 
+                <VerticalStackLayout IsVisible="{Binding IsLoggedInUser}" Spacing="6">
+                    <Label Text="{Binding AccountName}" />
+                    <Label Text="{Binding AccountEmail}" />
+                    <Label Text="{Binding AccountPhone}" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout IsVisible="{Binding IsGuestUser}" Spacing="6">
+                    <Entry Placeholder="Your Name"  Text="{Binding GuestName}" />
+                    <Entry Placeholder="Email"  Text="{Binding GuestEmail}" />
+                    <Entry Placeholder="Phone"  Text="{Binding GuestPhone}" />
+                </VerticalStackLayout>
+
                 <Frame Padding="14" CornerRadius="14" HasShadow="True">
                     <VerticalStackLayout Spacing="8">
                         <Label Text="RSVP" FontSize="18" FontAttributes="Bold" />

@@ -7,7 +7,20 @@ namespace RSVP_App;
 public partial class RSVP : ContentPage
 {
     private int _eventId;
+    public bool IsLoggedInUser => AppSession.isLoggedIn && !AppSession.isGuest;
+    public bool IsGuestUser => !IsLoggedInUser;
 
+    //logged in display labels
+    public string AccountName => $"Name: {AppSession.Name}";
+    public string AccountEmail => $"Email: {AppSession.Email}";
+    public string AccountPhone => $"Phone: {AppSession.Phone}";
+
+    //Guest Entry Fields
+    public string GuestName { get; set; } = "";
+    public string GuestEmail { get; set; } = "";
+    public string GuestPhone { get; set; } = "";
+
+    //Event Details Fields
     public string TitleText { get; set; } = "Loading....";
     public string WhenText { get; set; } = "";
     public string Location { get; set; } = "";
