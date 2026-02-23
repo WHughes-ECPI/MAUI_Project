@@ -1,4 +1,5 @@
 ﻿using SQLite;
+using System.Linq;
 using RSVP_App.Models;
 
 namespace RSVP_App.Services;
@@ -31,7 +32,6 @@ public partial class DatabaseService
         //Seed with a default user account for testing purposes.
         var host = new UserAccount
         {
-            UserId = 0,
             Name = "Will Hughes",
             Email = "wilhug8130@students.ecpi.edu",
             Password = "Password1",
@@ -39,6 +39,7 @@ public partial class DatabaseService
         };
 
         await _db.InsertAsync(host);
+        //host.UserId will not be the assigned primary key
 
         //Seed with a default event for testing purposes.
         var now = DateTime.UtcNow;
@@ -93,16 +94,14 @@ public partial class DatabaseService
     {
         await InitAsync();
         //Pull all RSVP rows for this user + any status except accepted (pending or declined)
-        var rsvps = await _db!.Table<RsvpItem>()
-            .Where(r => r.UserId == userId && r.Status != 1)
+        var respondedEventIds = await _db.Table<RsvpItem>()
+            .Where(r => r.UserId == userId && r.Status == 1)
             .ToListAsync();
-        
-        var respondedIds = rsvps.Select(r => r.EventId).Distinct().ToList();
 
-        //All events variable with accepted filtered out
-        var allEvents = await _db.Table<EventItem>().OrderBy(e => e.StartUtc).ToListAsync();
-
-        return allEvents.Where(e => !respondedIds.Contains(e.EventId)).ToList();
+        return await _db.Table<EventItem>()
+             .Where(e => !respondedEventIds.Contains(e.EventId))
+             .OrderBy(e => e.StartUtc)
+             .ToListAsync();
     }
 
     public async Task<UserAccount?> GetUserByEmailAsync(string email)

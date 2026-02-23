@@ -15,34 +15,58 @@ public partial class LoginPage : ContentPage
 
 	private async void OnLoginClicked(object sender, EventArgs e)
 	{
-		string username = usernameEntry.Text;
-		string password = passwordEntry.Text;
+		string username = usernameEntry.Text?.Trim() ?? ""; 
+		string password = passwordEntry.Text ?? "";
+
 		if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
 		{
 			await DisplayAlert("Error", "Please enter both email and password.", "OK");
 			return;
 		}
-		bool isAuthenticated = await AuthenticateUser(username, password);
-		if (isAuthenticated)
+		if (username.Equals("hughes", StringComparison.OrdinalIgnoreCase))
 		{
-			await Shell.Current.GoToAsync("//events");
+			username = "wilhug8130@students.ecpi.edu";
 		}
-		else
-		{
-			await DisplayAlert("Error", "Invalid email or password.", "OK");
-		}
-	}
 
-	private Task<bool> AuthenticateUser(string username, string password)
+		//Validate against DB
+		var user = await AuthenticateUser(username, password);
+
+		if (user == null)
+		{
+			await DisplayAlert(
+				"Login Failed",
+				"That account was not found or the password is incorrect.",
+				"OK");
+
+			//Stop here
+			return;
+		}
+
+		//Success sets session and navigates to landing page
+        AppSession.isLoggedIn = true;
+        AppSession.isGuest = false;
+        AppSession.UserId = user.UserId;
+        AppSession.Name = user.Name;
+        AppSession.Email = user.Email;
+        AppSession.Phone = user.Phone;
+
+        await Shell.Current.GoToAsync("//events");
+    }
+
+	private async Task<Models.UserAccount?> AuthenticateUser(string email, string password)
 	{
-		return Task.FromResult(username.Trim().ToLower() == "hughes" && password == "Password1");
+		await App.Db.InitAsync();
 
+		var user = await App.Db.GetUserByEmailAsync(email.Trim().ToLower());
+		if (user == null) return null;
+
+		return user.Password == password ? user : null;
     }
 
     private async void OnGuestLoginClicked(object sender, EventArgs e)
 	{
 		AppSession.LoginAsGuest();
-		await Shell.Current.GoToAsync("//events/eventlist");
+		await Shell.Current.GoToAsync("//events");
     }
 
 }

@@ -8,8 +8,12 @@
             Text="Profile"
             VerticalOptions="Center" 
             HorizontalOptions="Center" />
-        <Label
-            Text="Username" />
+        <Label Text="{Binding Name}" />
+        <Label Text="{Binding Email}" />
+        <Label Text="{Binding Phone}" />
+
+        <Button Text="Log Out"
+                Clicked="OnLogOutClicked" />
 
     </VerticalStackLayout>
 </ContentPage>

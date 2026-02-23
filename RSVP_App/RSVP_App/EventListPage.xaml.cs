@@ -1,4 +1,5 @@
 using RSVP_App.Services;
+using RSVP_App.Models;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 
@@ -6,8 +7,8 @@ namespace RSVP_App
 {
 	public partial class EventListPage : ContentPage
 	{
-		public ObservableCollection<EventCard> PendingEvents { get; set; } = new();
-		public ObservableCollection<EventCard> AcceptedEvents { get; set; } = new();
+		public ObservableCollection<EventItem> PendingEvents { get; set; } = new();
+		public ObservableCollection<EventItem> AcceptedEvents { get; set; } = new();
 		public ICommand RsvpCommand { get; }
 		public ICommand DetailsCommand { get; }
 
@@ -26,8 +27,8 @@ namespace RSVP_App
 		{
 			InitializeComponent();
 
-			RsvpCommand = new Command<EventCard>(async (ev) => await GotoRsvp(ev));
-			DetailsCommand = new Command<EventCard>(async (ev) => await GotoDetails(ev));
+			RsvpCommand = new Command<EventItem>(async (ev) => await GotoRsvp(ev));
+			DetailsCommand = new Command<EventItem>(async (ev) => await GotoDetails(ev));
 
 			BindingContext = this;
 			OnPropertyChanged(nameof(CanAddEvent));
@@ -41,33 +42,36 @@ namespace RSVP_App
 			AcceptedEvents.Clear();
 
 			// HardCoded Pending Events
-			PendingEvents.Add(new EventCard
+			PendingEvents.Add(new EventItem
 			{
 				EventId = 101,
 				Title = "Study Group Meetup",
-				WhenWhere = "Tuesday, 6:00 PM * Online(Teams)"
+				Location = "Online(Teams)",
+				StartUtc = "Tuesday 6:00pm"
 			});
 
-			PendingEvents.Add(new EventCard
+			PendingEvents.Add(new EventItem
 			{
 				EventId = 102,
 				Title = "Project Brainstorming Session",
-				WhenWhere = "Thursday, 3:00 PM * Online(Zoom)"
+				Location = "Online(Zoom)",
+				StartUtc = "Monday 4:00pm"
 			});
 
 			//Hardcoded Accepted Events
-			AcceptedEvents.Add(new EventCard
+			AcceptedEvents.Add(new EventItem
 			{
 				EventId = 201,
 				Title = "Weekly Team Sync",
-				WhenWhere = "Monday, 10:00 AM * Online(Teams)"
+				Location = "Online(Teams)"
 			});
 
-			AcceptedEvents.Add(new EventCard
+			AcceptedEvents.Add(new EventItem
 			{
 				EventId = 202,
 				Title = "Client Presentation",
-				WhenWhere = "Wednesday, 2:00 PM * Online(Zoom)"
+				Location = "Online(Zoom)",
+				StartUtc = "Wednesday 2:00pm"
 			});
 
 			//Refresh the UI
@@ -79,19 +83,19 @@ namespace RSVP_App
 			OnPropertyChanged(nameof(IsAcceptedNotEmpty));
 		}
 
-		private async Task GotoRsvp(EventCard ev)
+		private async Task GotoRsvp(EventItem ev)
 		{
 			if (ev == null) return;
 			var navigationParameter = new Dictionary<string, object>
 		{
 			{ "EventId", ev.EventId },
 			{ "Title", ev.Title },
-			{ "WhenWhere", ev.WhenWhere }
+			{ "Location", ev.Location }
 		};
 			await Shell.Current.GoToAsync("rsvp", navigationParameter);
 		}
 
-		private async Task GotoDetails(EventCard ev)
+		private async Task GotoDetails(EventItem ev)
 		{
 			if (ev == null) return;
 			await Shell.Current.GoToAsync($"eventdetails?EventId={ev.EventId}");
@@ -104,7 +108,7 @@ namespace RSVP_App
 
 		private async void OnPendingSelectionChanged(object sender, SelectionChangedEventArgs e)
 		{
-			if (e.CurrentSelection.FirstOrDefault() is EventCard selectedEvent)
+			if (e.CurrentSelection.FirstOrDefault() is EventItem selectedEvent)
 			{
 				await GotoDetails(selectedEvent);
 				((CollectionView)sender).SelectedItem = null; // Deselect after navigation
@@ -113,7 +117,7 @@ namespace RSVP_App
 
 		private async void OnAcceptedSelectionChanged(object sender, SelectionChangedEventArgs e)
 		{
-			if (e.CurrentSelection.FirstOrDefault() is EventCard selectedEvent)
+			if (e.CurrentSelection.FirstOrDefault() is EventItem selectedEvent)
 			{
 				await GotoDetails(selectedEvent);
 				((CollectionView)sender).SelectedItem = null; // Deselect after navigation
@@ -134,12 +138,48 @@ namespace RSVP_App
 			await Shell.Current.GoToAsync("addevent");
 		}
 
-
-		public class EventCard
+		private async Task LoadFromDbAsync()
 		{
-			public int EventId { get; set; }
-			public string Title { get; set; } = "";
-			public string WhenWhere { get; set; } = "";
+			await App.Db.InitAsync();
+
+			PendingEvents.Clear();
+			AcceptedEvents.Clear();
+
+			//Guest: show all events as accepted/scheduled
+			if (!AppSession.isLoggedIn || AppSession.isGuest)
+			{
+				var allEvents = await App.Db.GetAllEventsAsync();
+				foreach (var ev in allEvents)
+					AcceptedEvents.Add(ev);
+			}
+			else
+			{
+				//Logged in user
+				int userId = AppSession.UserId;
+
+				var pending = await App.Db.GetPendingEventsForUserAsync(userId);
+				var accepted = await App.Db.GetAcceptedEventsForUserAsync(userId);
+
+				foreach (var ev in pending)
+					PendingEvents.Add(ev);
+
+				foreach (var ev in accepted)
+					AcceptedEvents.Add(ev);
+			}
+
+			//Notify UI
+			OnPropertyChanged(nameof(PendingEvents));
+			OnPropertyChanged(nameof(AcceptedEvents));
 		}
+
+		protected override async void OnAppearing()
+		{
+			base.OnAppearing();
+
+			AddEventButton.IsVisible = AppSession.isLoggedIn && !AppSession.isGuest && AppSession.UserId > 0;
+
+			await LoadFromDbAsync();
+		}
+
 	}
 }
