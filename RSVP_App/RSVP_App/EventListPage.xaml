@@ -11,7 +11,15 @@
                    FontSize="24"
                    FontAttributes="Bold"
                    VerticalOptions="Center" />
+
             <Button Grid.Column="1"
+                    Text="Add Event"
+                    Padding="14,8"
+                    CornerRadius="10" 
+                    Clicked="OnAddEventClicked"
+                    VerticalOptions="Center"/>
+            
+            <Button Grid.Column="2"
                     Text="Profile"
                     Padding="14,8"
                     CornerRadius="10"

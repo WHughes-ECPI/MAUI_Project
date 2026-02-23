@@ -3,10 +3,71 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="RSVP_App.AddEventPage"
              Title="AddEventPage">
-    <VerticalStackLayout>
-        <Label 
-            Text="Welcome to .NET MAUI!"
-            VerticalOptions="Center" 
-            HorizontalOptions="Center" />
-    </VerticalStackLayout>
+
+    <Grid Padding="16" RowDefinitions="Auto,*" RowSpacing="12">
+        
+        <!--Top Bar-->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+            <Button Text="Cancel"
+                    Padding="14,8"
+                    CornerRadius="10"
+                    Clicked="OnCancelClicked" />
+            <Label Grid.Column="1"
+                   Text="Add Event"
+                   FontSize="22"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center" />
+            <Button Grid.Column="2"
+                    Text="Save"
+                    Padding="14,8"
+                    CornerRadius="10"
+                    Clicked="OnSaveClicked" />
+        </Grid>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="12">
+
+                <Frame Padding="14" CornerRadius="14" HasShadow="True">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Event Info" FontSize="18" FontAttributes="Bold" />
+
+                        <Entry Placeholder="Title"
+                               Text="{Binding TitleText}" />
+
+                        <Editor AutoSize="TextChanges"
+                                HeightRequest="120"
+                                Placeholder="Description"
+                                Text="{Binding DescriptionText}" />
+
+                        <Entry Placeholder="Location"
+                               Text="{Binding LocationText}" />
+                    </VerticalStackLayout>
+                </Frame>
+
+                <Frame Padding="14" CornerRadius="14" HasShadow="True">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Schedule" FontSize="18" FontAttributes="Bold" />
+
+                        <Label Text="Start Date" />
+                        <DatePicker Date="{Binding StartDate}" />
+
+                        <Label Text="Start Time" />
+                        <TimePicker Time="{Binding StartTime}" />
+
+                        <Label Text="End Date" />
+                        <DatePicker Date="{Binding EndDate}" />
+
+                        <Label Text="End Time" />
+                        <TimePicker Time="{Binding EndTime}" />
+                    </VerticalStackLayout>
+                </Frame>
+
+                <Label Text="{Binding StatusMessage}"
+                       TextColor="Red"
+                       FontAttributes="Bold"
+                       IsVisible="{Binding HasStatusMessage}" />
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
 </ContentPage>

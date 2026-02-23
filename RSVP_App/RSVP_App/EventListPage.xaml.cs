@@ -1,3 +1,4 @@
+using RSVP_App.Services;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 
@@ -19,6 +20,8 @@ namespace RSVP_App
 		public bool IsPendingNotEmpty => PendingEvents.Count > 0;
 		public bool IsAcceptedNotEmpty => AcceptedEvents.Count > 0;
 
+		public bool CanAddEvent => AppSession.isLoggedIn && !AppSession.isGuest;
+
 		public EventListPage()
 		{
 			InitializeComponent();
@@ -27,6 +30,7 @@ namespace RSVP_App
 			DetailsCommand = new Command<EventCard>(async (ev) => await GotoDetails(ev));
 
 			BindingContext = this;
+			OnPropertyChanged(nameof(CanAddEvent));
 
 			LoadHardCodedEvents();
 		}
@@ -114,6 +118,20 @@ namespace RSVP_App
 				await GotoDetails(selectedEvent);
 				((CollectionView)sender).SelectedItem = null; // Deselect after navigation
 			}
+		}
+
+		private async void OnAddEventClicked(object sender, EventArgs e)
+		{
+			if(!AppSession.isLoggedIn || AppSession.isGuest)
+			{
+				await DisplayAlert(
+					"Login Required",
+					"Please log in to a valid account to host an event.",
+					"Ok");
+				return;
+			}
+
+			await Shell.Current.GoToAsync("addevent");
 		}
 
 

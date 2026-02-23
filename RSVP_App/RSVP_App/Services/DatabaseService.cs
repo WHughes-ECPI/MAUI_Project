@@ -123,6 +123,12 @@ public partial class DatabaseService
         return await _db!.Table<UserAccount>().Where(u => u.UserId == userId).FirstOrDefaultAsync();
     }
 
+    public async Task<int> AddEventAsync(EventItem ev)
+    {
+        await InitAsync();
+        return await _db!.InsertAsync(ev);
+    }
+
     public async Task UpdateRsvpAsync(RsvpItem rsvp)
     {
         await InitAsync();
