@@ -73,31 +73,35 @@ public partial class DatabaseService
     public async Task<List<EventItem>> GetAcceptedEventsForUserAsync(int userId)
     {
         await InitAsync();
-        //Pull RSVP Rows for this user + accepted status
-        var rsvps = await _db.Table<RsvpItem>()
-            .Where(r => r.UserId == userId && r.Status == 1)
+
+        var acceptedRows = await _db.Table<RsvpItem>()
+            .Where(r => r.UserId == userId && r.Status == 1) //1 = Accepted
             .ToListAsync();
 
-        //Extract EventIds from those RSVPs
-        var acceptedEventIds = rsvps.Select(rsvps => rsvps.EventId).Distinct().ToList();
+        var acceptedEventIds = acceptedRows.Select(r => r.EventId).ToList();
 
         if (acceptedEventIds.Count == 0)
             return new List<EventItem>();
 
-        //Pull EventItems and filter in memory
-        var allEvents = await _db.Table<EventItem>().ToListAsync();
-
-        return allEvents.Where(e => acceptedEventIds.Contains(e.EventId)).OrderBy(e => e.StartUtc).ToList();
+        return await _db.Table<EventItem>()
+            .Where(e => acceptedEventIds.Contains(e.EventId))
+            .OrderBy(e => e.StartUtc)
+            .ToListAsync();
     }
 
     public async Task<List<EventItem>> GetPendingEventsForUserAsync(int userId)
     {
         await InitAsync();
+
         //Pull all RSVP rows for this user + any status except accepted (pending or declined)
-        var respondedEventIds = await _db.Table<RsvpItem>()
-            .Where(r => r.UserId == userId && r.Status == 1)
+        var respondedRows = await _db.Table<RsvpItem>()
+            .Where(r => r.UserId == userId)
             .ToListAsync();
 
+        //Convert rows to list of EventIds
+        var respondedEventIds = respondedRows.Select(r => r.EventId).Distinct().ToList();
+
+        // Pending = events that are not in the responded list
         return await _db.Table<EventItem>()
              .Where(e => !respondedEventIds.Contains(e.EventId))
              .OrderBy(e => e.StartUtc)

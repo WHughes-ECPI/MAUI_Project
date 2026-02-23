@@ -13,7 +13,7 @@ public partial class EventDetailsPage : ContentPage
 {
 	private int _eventId;
 
-	public string TitleText { get; set; } = "Loading....";
+    public string TitleText { get; set; } = "Loading....";
 	public string StartUtc { get; set; } = "";
 	public string Location { get; set; } = "";
 	public string HostName { get; set; } = "";
@@ -138,7 +138,8 @@ public partial class EventDetailsPage : ContentPage
 
 	private async void OnRsvpClicked(object sender, EventArgs e)
 	{
-		await Shell.Current.GoToAsync($"rsvp?EventID={_eventId}");
+
+		await Shell.Current.GoToAsync($"rsvp?EventId={_eventId}");
     }
 
 	private class EventDetailsModel

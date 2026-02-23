@@ -1,5 +1,6 @@
 using RSVP_App.Models;
 using RSVP_App.Services;
+using System.Threading.Tasks;
 
 namespace RSVP_App;
 
@@ -23,6 +24,7 @@ public partial class RSVP : ContentPage
     //Event Details Fields
     public string TitleText { get; set; } = "Loading....";
     public string WhenText { get; set; } = "";
+    public string StartUtc { get; set; } = "";
     public string Location { get; set; } = "";
     public string HostName { get; set; } = "";
     public string Description { get; set; } = "";
@@ -45,21 +47,15 @@ public partial class RSVP : ContentPage
             if (int.TryParse(value, out var id))
             {
                 _eventId = id;
-                _ = LoadEventandPrefillAsync();
+                _ = LoadEventandPrefillAsync(_eventId);
             }
-            else
-            {
-                //No valid event id, just load the default values (for testing)
-                LoadEvent(0);
-            }
+            
         }
     }
 
     public RSVP()
     {
         InitializeComponent();
-
-        LoadEvent(0);
         BindingContext = this;
     }
 
@@ -85,51 +81,47 @@ public partial class RSVP : ContentPage
     }
 
     //HardCoded event for testing and fail catch
-    private void LoadEvent(int eventId)
+    private async Task LoadEventAsync(int eventId)
     {
-        var events = GetHardCodedEvents();
+        try
+        {
+            await App.Db.InitAsync();
 
-        var ev = events.FirstOrDefault(e => e.EventId == eventId) ?? events.First();
+            var ev = await App.Db.GetEventByIdAsync(eventId);
 
-        TitleText = ev.Title;
-        WhenText = ev.WhenWhere;
-        Location = ev.Location;
-        HostName = ev.HostName;
-        Description = ev.Description;
+            if (ev == null)
+            {
+                TitleText = "Event not found";
+                StartUtc = "";
+                Location = "";
+                HostName = "";
+                Description = "";
+                RefreshAll();
+                return;
+            }
 
-        //Refresh the UI
-        OnPropertyChanged(nameof(TitleText));
-        OnPropertyChanged(nameof(WhenText));
-        OnPropertyChanged(nameof(Location));
-        OnPropertyChanged(nameof(HostName));
-        OnPropertyChanged(nameof(Description));
+            TitleText = ev.Title ?? "";
+            Location = ev.Location ?? "";
+            Description = ev.Description ?? "";
 
-        Title = "Event Details";
+            DateTime? start = DateTime.TryParse(ev.StartUtc, out var s) ? s.ToLocalTime() : (DateTime?)null;
+            DateTime? end = DateTime.TryParse(ev.EndUtc, out var e) ? e.ToLocalTime() : (DateTime?)null;
+
+            WhenText = start.HasValue
+            ? (end.HasValue ? $"{start.Value:ddd, MMM d * h:mm tt} - {end.Value:h:mm tt}" : $"{start.Value:ddd, MMM d * h:mm tt}")
+            : "Time unavailable";
+            RefreshAll();
+        }
+        catch (Exception ex)
+        {
+            TitleText = "Error loading event";
+            Description = ex.Message;
+            RefreshAll();
+        }
     }
 
-    private static List<EventDetailsModel> GetHardCodedEvents() => new()
-    {
-        new EventDetailsModel
-        {
-            EventId = 101,
-            Title = "Study Group Meetup",
-            WhenWhere = "Tuesday, 6:00 PM * Online(Teams)",
-            Location = "Online(Teams)",
-            HostName = "Alice Johnson",
-            Description = "Join us for a study group meetup to prepare for the upcoming exams. We'll cover key topics and share study tips."
-        },
-        new EventDetailsModel
-        {
-            EventId = 201,
-            Title = "Weekly Team Sync",
-            WhenWhere = "Monday, 10:00 AM * Online(Teams)",
-            Location = "Online(Teams)",
-            HostName = "Bob Smith",
-            Description = "Our weekly team sync to discuss project updates, blockers, and next steps. Please come prepared with your status updates."
-        }
-    };
 
-    private async Task LoadEventandPrefillAsync()
+    private async Task LoadEventandPrefillAsync(int _eventId)
     {
             await App.Db.InitAsync();
 
@@ -138,19 +130,23 @@ public partial class RSVP : ContentPage
             {
                 TitleText = "Event not found";
                 Description = "No event found with the specified ID.";
+                Location = "";
+                WhenText = "";
                 RefreshAll();
                 return;
             }
-            else
-            {
-                TitleText = ev.Title;
 
-                DateTime? start = DateTime.TryParse(ev.StartUtc, out var startDt) ? startDt.ToLocalTime() : null;
-                WhenText = start != null ? $"When: {start:ddd, MMM d yyyy h:mm tt}" : "When: Time Unavailable";
-            }
+            TitleText = ev.Title ?? "";
+            Description = ev.Description ?? "";
+            Location = ev.Location ?? "";
 
-            OnPropertyChanged(nameof(TitleText));
-            OnPropertyChanged(nameof(WhenText));
+            DateTime? start = DateTime.TryParse(ev.StartUtc, out var s) ? s.ToLocalTime() : (DateTime?)null;
+            DateTime? end = DateTime.TryParse(ev.EndUtc, out var e) ? e.ToLocalTime() : (DateTime?)null;
+
+        WhenText = start.HasValue
+            ? (end.HasValue ? $"{start.Value:ddd, MMM d * h:mm tt} - {end.Value:h:mm tt}" : $"{start.Value:ddd, MMM d * h:mm tt}")
+            : "Time unavailable";
+        RefreshAll();
     }
 
     private void RefreshAll()
