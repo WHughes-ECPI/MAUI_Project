@@ -70,7 +70,7 @@ public partial class DatabaseService
         return await _db.Table<EventItem>().OrderBy(e => e.StartUtc).ToListAsync();
     }   
 
-    public async Task<List<EventItem>> GetAcceptedEventsForUserAsync(int userId)
+    public async Task<List<EventItem>> GetAttendingEventByUserAsync(int userId)
     {
         await InitAsync();
 
@@ -85,6 +85,15 @@ public partial class DatabaseService
 
         return await _db.Table<EventItem>()
             .Where(e => acceptedEventIds.Contains(e.EventId))
+            .OrderBy(e => e.StartUtc)
+            .ToListAsync();
+    }
+
+    public async Task<List<EventItem>> GetHostingEventByUserAsync(int userId)
+    {
+        await InitAsync();
+        return await _db!.Table<EventItem>()
+            .Where(e => e.HostUserId == userId)
             .OrderBy(e => e.StartUtc)
             .ToListAsync();
     }
@@ -158,6 +167,21 @@ public partial class DatabaseService
         //Guest RSVP or first RSVP for a logged in user
         rsvp.CreatedUtc = DateTime.UtcNow.ToString("o");
         await _db!.InsertAsync(rsvp);
+    }
+
+    public async Task<int> AddUserAsync(UserAccount user)
+    {
+        await InitAsync();
+        return await _db!.InsertAsync(user);
+    }
+
+    public async Task<List<EventItem>> GetEventHostedByUserAsync(int userId)
+    {
+        await InitAsync();
+        return await _db!.Table<EventItem>()
+            .Where(e => e.HostUserId == userId)
+            .OrderBy(e => e.StartUtc)
+            .ToListAsync();
     }
 
 }

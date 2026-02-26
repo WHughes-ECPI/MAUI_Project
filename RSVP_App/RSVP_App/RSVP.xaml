@@ -71,15 +71,15 @@
                         <Label Text="RSVP" FontSize="18" FontAttributes="Bold" />
 
                         <Label Text="Response" />
-                        <Picker ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding SelectedStatusIndex}" />
+                        <Picker ItemsSource="{Binding StatusOptions}" SelectedIndex="{Binding SelectedStatusIndex}" />
 
                         <Label Text="Party Size" />
                         <Entry Placeholder="1"
                                Keyboard="Numeric"
-                               Text="{Binding PartySize}" />
+                               Text="{Binding PartySizeText}" />
 
                         <Label Text="Notes" />
-                        <Editor Placeholder="Any additional info..." Text="{Binding Notes}" AutoSize="TextChanges" />
+                        <Editor Placeholder="Any additional info..." Text="{Binding NotesText}" AutoSize="TextChanges" />
                     </VerticalStackLayout>
                 </Frame>
             </VerticalStackLayout>

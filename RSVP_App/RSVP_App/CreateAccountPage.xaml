@@ -3,10 +3,24 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="RSVP_App.CreateAccountPage"
              Title="CreateAccountPage">
-    <VerticalStackLayout>
-        <Label 
-            Text="UNDER CONSTRUCTION"
-            VerticalOptions="Center" 
-            HorizontalOptions="Center" />
-    </VerticalStackLayout>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12">
+
+            <Label Text="Create Account"
+                   FontSize="24"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center" />
+
+            <Entry x:Name="nameEntry" Placeholder="Enter Your Full Name" />
+            <Entry x:Name="emailEntry" Placeholder="Enter Your Email Address" Keyboard="Email" />
+            <Entry x:Name="phoneEntry" Placeholder="Enter Your Phone Number" Keyboard="Telephone" />
+            <Entry x:Name="passwordEntry" Placeholder="Enter A Password" IsPassword="True" />
+            <Entry x:Name="confirmEntry" Placeholder="Confirm Password" IsPassword="True" />
+
+            <Button Text="Create Account" Clicked="OnCreateAccountClicked" />
+            <Button Text="Back to Login" Clicked="OnBackToLoginClicked" />
+            
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>

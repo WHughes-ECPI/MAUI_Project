@@ -19,11 +19,7 @@
                    HorizontalOptions="Center"
                    VerticalOptions="Center" />
 
-            <Button Grid.Column="2"
-                    Text="RSVP"
-                    Padding="14,8"
-                    CornerRadius="10"
-                    Clicked="OnRsvpClicked" />
+            
         </Grid>
         
         <!-- Details Card -->
@@ -55,6 +51,12 @@
                 </Frame>
             </VerticalStackLayout>
         </ScrollView>
-                    
+
+        <Button Grid.Row="2"
+        Text="RSVP"
+        Padding="14,8"
+        CornerRadius="10"
+        Clicked="OnRsvpClicked" />
+
     </Grid>
 </ContentPage>

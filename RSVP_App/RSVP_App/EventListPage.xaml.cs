@@ -1,185 +1,127 @@
-using RSVP_App.Services;
 using RSVP_App.Models;
+using RSVP_App.Services;
 using System.Collections.ObjectModel;
-using System.Windows.Input;
 
-namespace RSVP_App
+namespace RSVP_App;
+
+public partial class EventListPage : ContentPage
 {
-	public partial class EventListPage : ContentPage
-	{
-		public ObservableCollection<EventItem> PendingEvents { get; set; } = new();
-		public ObservableCollection<EventItem> AcceptedEvents { get; set; } = new();
-		public ICommand RsvpCommand { get; }
-		public ICommand DetailsCommand { get; }
+    private readonly SemaphoreSlim _loadLock = new(1, 1); // To prevent concurrent loads
+    public ObservableCollection<EventItem> Events { get; set; } = new ObservableCollection<EventItem>();
 
-		public string PendingCountText => $"{PendingEvents.Count} pending";
-		public string AcceptedCountText => $"{AcceptedEvents.Count} accepted";
+    public List<string> FilterOptions { get; set; } = new() { "All Events" };
+    public int SelectedFilterIndex { get; set; } = 0;
 
-		public bool IsPendingEmpty => PendingEvents.Count == 0;
-		public bool IsAcceptedEmpty => AcceptedEvents.Count == 0;
+    public EventListPage()
+    {
+        InitializeComponent();
+        BindingContext = this;
+    }
 
-		public bool IsPendingNotEmpty => PendingEvents.Count > 0;
-		public bool IsAcceptedNotEmpty => AcceptedEvents.Count > 0;
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
 
-		public bool CanAddEvent => AppSession.isLoggedIn && !AppSession.isGuest;
+        AddEventButton.IsVisible = AppSession.isLoggedIn && !AppSession.isGuest && AppSession.UserId > 0;
+        //Build filter options
+        if (AppSession.isLoggedIn && !AppSession.isGuest && AppSession.UserId > 0)
+        {
+            FilterOptions = new List<string> { "All Events", "Attending", "Hosting" };
+        }
+        else
+        {
+            FilterOptions = new List<string> { "All Events" };
+        }
 
-		public EventListPage()
-		{
-			InitializeComponent();
+        SelectedFilterIndex = 0; // Reset to "All Events" when page appears
 
-			RsvpCommand = new Command<EventItem>(async (ev) => await GotoRsvp(ev));
-			DetailsCommand = new Command<EventItem>(async (ev) => await GotoDetails(ev));
+        OnPropertyChanged(nameof(FilterOptions));
+        OnPropertyChanged(nameof(SelectedFilterIndex));
 
-			BindingContext = this;
-			OnPropertyChanged(nameof(CanAddEvent));
+        await LoadEventsAsync();
+    }
 
-			LoadHardCodedEvents();
-		}
+    private async void OnFilterChanged(object sender, EventArgs e)
+    {
+        await LoadEventsAsync();
+    }
 
-		private void LoadHardCodedEvents()
-		{
-			PendingEvents.Clear();
-			AcceptedEvents.Clear();
+    private async Task LoadEventsAsync()
+    {
+        if(!await _loadLock.WaitAsync(0)) // Try to acquire lock without waiting
+        {
+            return; // Another load is in progress, skip this one
+        }
+        try
+        {
+            await App.Db.InitAsync();
+            Events.Clear();
 
-			// HardCoded Pending Events
-			PendingEvents.Add(new EventItem
-			{
-				EventId = 101,
-				Title = "Study Group Meetup",
-				Location = "Online(Teams)",
-				StartUtc = "Tuesday 6:00pm"
-			});
+            //Guest or not logged in -> All Events only
+            if (!AppSession.isLoggedIn || AppSession.isGuest || AppSession.UserId <= 0)
+            {
+                var allEvents = await App.Db.GetAllEventsAsync();
+                foreach (var ev in allEvents)
+                {
+                    Events.Add(ev);
+                }
+                return;
+            }
+            int userId = AppSession.UserId;
 
-			PendingEvents.Add(new EventItem
-			{
-				EventId = 102,
-				Title = "Project Brainstorming Session",
-				Location = "Online(Zoom)",
-				StartUtc = "Monday 4:00pm"
-			});
+            if (SelectedFilterIndex == 0) //All
+            {
+                var allEvents = await App.Db.GetAllEventsAsync();
+                foreach (var ev in allEvents)
+                {
+                    Events.Add(ev);
+                }
+            }
+            else if (SelectedFilterIndex == 1) //Attending
+            {
+                var attendingEvents = await App.Db.GetAttendingEventByUserAsync(userId);
+                foreach (var ev in attendingEvents)
+                {
+                    Events.Add(ev);
+                }
+            }
+            else if (SelectedFilterIndex == 2) //Hosting
+            {
+                var hostingEvents = await App.Db.GetHostingEventByUserAsync(userId);
+                foreach (var ev in hostingEvents)
+                {
+                    Events.Add(ev);
+                }
+            }
+        }
+        finally 
+        {
+            _loadLock.Release();
+        }
+    }
 
-			//Hardcoded Accepted Events
-			AcceptedEvents.Add(new EventItem
-			{
-				EventId = 201,
-				Title = "Weekly Team Sync",
-				Location = "Online(Teams)"
-			});
+    private async void OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (e.CurrentSelection.FirstOrDefault() is EventItem selected)
+        {
+            await Shell.Current.GoToAsync($"eventdetails?EventId={selected.EventId}");
+            ((CollectionView)sender).SelectedItem = null; // Deselect item after navigation
+        }
+    }
 
-			AcceptedEvents.Add(new EventItem
-			{
-				EventId = 202,
-				Title = "Client Presentation",
-				Location = "Online(Zoom)",
-				StartUtc = "Wednesday 2:00pm"
-			});
+    private async void OnProfileClicked(object sender, EventArgs e)
+    {
+        await Shell.Current.GoToAsync("profile");
+    }
 
-			//Refresh the UI
-			OnPropertyChanged(nameof(PendingCountText));
-			OnPropertyChanged(nameof(AcceptedCountText));
-			OnPropertyChanged(nameof(IsPendingEmpty));
-			OnPropertyChanged(nameof(IsAcceptedEmpty));
-			OnPropertyChanged(nameof(IsPendingNotEmpty));
-			OnPropertyChanged(nameof(IsAcceptedNotEmpty));
-		}
+    private async void OnAddEventClicked(object sender, EventArgs e)
+    {
+        if (!AppSession.isLoggedIn || AppSession.isGuest || AppSession.UserId <= 0)
+        {
+            await DisplayAlert("Access Denied", "You must be logged in to add an event.", "OK");
+            return;
+        }
 
-		private async Task GotoRsvp(EventItem ev)
-		{
-			if (ev == null) return;
-			var navigationParameter = new Dictionary<string, object>
-		{
-			{ "EventId", ev.EventId },
-			{ "Title", ev.Title },
-			{ "Location", ev.Location }
-		};
-			await Shell.Current.GoToAsync("rsvp", navigationParameter);
-		}
-
-		private async Task GotoDetails(EventItem ev)
-		{
-			if (ev == null) return;
-			await Shell.Current.GoToAsync($"eventdetails?EventId={ev.EventId}");
-		}
-
-		private async void OnProfileClicked(object sender, EventArgs e)
-		{
-			await Shell.Current.GoToAsync("profile");
-		}
-
-		private async void OnPendingSelectionChanged(object sender, SelectionChangedEventArgs e)
-		{
-			if (e.CurrentSelection.FirstOrDefault() is EventItem selectedEvent)
-			{
-				await GotoDetails(selectedEvent);
-				((CollectionView)sender).SelectedItem = null; // Deselect after navigation
-			}
-		}
-
-		private async void OnAcceptedSelectionChanged(object sender, SelectionChangedEventArgs e)
-		{
-			if (e.CurrentSelection.FirstOrDefault() is EventItem selectedEvent)
-			{
-				await GotoDetails(selectedEvent);
-				((CollectionView)sender).SelectedItem = null; // Deselect after navigation
-			}
-		}
-
-		private async void OnAddEventClicked(object sender, EventArgs e)
-		{
-			if(!AppSession.isLoggedIn || AppSession.isGuest)
-			{
-				await DisplayAlert(
-					"Login Required",
-					"Please log in to a valid account to host an event.",
-					"Ok");
-				return;
-			}
-
-			await Shell.Current.GoToAsync("addevent");
-		}
-
-		private async Task LoadFromDbAsync()
-		{
-			await App.Db.InitAsync();
-
-			PendingEvents.Clear();
-			AcceptedEvents.Clear();
-
-			//Guest: show all events as accepted/scheduled
-			if (!AppSession.isLoggedIn || AppSession.isGuest)
-			{
-				var allEvents = await App.Db.GetAllEventsAsync();
-				foreach (var ev in allEvents)
-					AcceptedEvents.Add(ev);
-			}
-			else
-			{
-				//Logged in user
-				int userId = AppSession.UserId;
-
-				var pending = await App.Db.GetPendingEventsForUserAsync(userId);
-				var accepted = await App.Db.GetAcceptedEventsForUserAsync(userId);
-
-				foreach (var ev in pending)
-					PendingEvents.Add(ev);
-
-				foreach (var ev in accepted)
-					AcceptedEvents.Add(ev);
-			}
-
-			//Notify UI
-			OnPropertyChanged(nameof(PendingEvents));
-			OnPropertyChanged(nameof(AcceptedEvents));
-		}
-
-		protected override async void OnAppearing()
-		{
-			base.OnAppearing();
-
-			AddEventButton.IsVisible = AppSession.isLoggedIn && !AppSession.isGuest && AppSession.UserId > 0;
-
-			await LoadFromDbAsync();
-		}
-
-	}
+        await Shell.Current.GoToAsync("addevent");
+    }
 }

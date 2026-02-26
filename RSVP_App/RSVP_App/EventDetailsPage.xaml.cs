@@ -12,6 +12,7 @@ namespace RSVP_App;
 public partial class EventDetailsPage : ContentPage
 {
 	private int _eventId;
+	public string WhenText { get; set; } = "When: Loading...";
 
     public string TitleText { get; set; } = "Loading....";
 	public string StartUtc { get; set; } = "";
@@ -37,54 +38,6 @@ public partial class EventDetailsPage : ContentPage
 		BindingContext = this;
 	}
 
-	//HardCoded event for testing and fail catch
-	private async Task LoadEventAsync(int eventId)
-	{
-		try
-		{
-			await App.Db.InitAsync();
-
-			var ev = await App.Db.GetEventByIdAsync(eventId);
-
-			if (ev == null)
-			{
-				TitleText = "Event not found";
-				StartUtc = "";
-				Location = "";
-				HostName = "";
-				Description = "";
-				RefreshAll();
-				return;
-
-			}
-
-			TitleText = ev.Title ?? "";
-			Location = ev.Location ?? "";
-			Description = ev.Description ?? "";
-
-			//Format Start/End Time
-			DateTime? start = DateTime.TryParse(ev.StartUtc, out var s) ? s.ToLocalTime() : (DateTime?)null;
-			DateTime? end = DateTime.TryParse(ev.EndUtc, out var e) ? e.ToLocalTime() : (DateTime?)null;
-
-			StartUtc = start.HasValue
-				? (end.HasValue
-					? $"{start.Value:ddd, MMM d * h:mm tt} - {end.Value:ddd, MMM d * h:mm tt}"
-					: $"{start.Value:ddd, MMM d * h:mm tt}")
-					: "Time unavailable";
-			//Host display
-			var host = await App.Db.GetUserByIdAsync(ev.HostUserId);
-			HostName = host != null ? $"Hosted by: {host.Name}" : $"Host UserId: {ev.HostUserId}";
-
-			RefreshAll();
-		}
-		catch(Exception ex)
-		{
-			TitleText = "Error loading events";
-			Description = ex.Message;
-			RefreshAll();
-		}
-	}
-
 	private async Task LoadFromDbAsync(int eventId)
 	{
 		try
@@ -107,8 +60,9 @@ public partial class EventDetailsPage : ContentPage
 			//Formatting Time
 			DateTime? start = DateTime.TryParse(ev.StartUtc, out var startDt) ? startDt.ToLocalTime() : null;
 			DateTime? end = DateTime.TryParse(ev.EndUtc, out var endDt) ? endDt.ToLocalTime() : null;
-			StartUtc = (start.HasValue && end.HasValue) ? $"When: {start.Value:ddd, MMM d yyyy h:mm tt} - {end.Value:h:mm tt}" : "When: Time Unavailable";
+			WhenText = (start.HasValue && end.HasValue) ? $"When: {start.Value:ddd, MMM d yyyy h:mm tt} - {end.Value:h:mm tt}" : "When: Time Unavailable";
 
+			OnPropertyChanged(nameof(WhenText));
 
             //HostName is not currently used in the UI, here if I want to add it later.
             var host = await App.Db.GetUserByIdAsync(ev.HostUserId);
@@ -125,7 +79,8 @@ public partial class EventDetailsPage : ContentPage
 
     private void RefreshAll()
 	{
-		OnPropertyChanged(nameof(TitleText));
+		OnPropertyChanged(nameof(WhenText));
+        OnPropertyChanged(nameof(TitleText));
 		OnPropertyChanged(nameof(StartUtc));
 		OnPropertyChanged(nameof(Location));
 		OnPropertyChanged(nameof(HostName));

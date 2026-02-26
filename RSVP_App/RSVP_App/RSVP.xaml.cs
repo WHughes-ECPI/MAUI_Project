@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace RSVP_App;
 
-[QueryProperty(nameof(EventId), "EventID")]
+[QueryProperty(nameof(EventId), "EventId")]
 public partial class RSVP : ContentPage
 {
     private int _eventId;
@@ -28,7 +28,7 @@ public partial class RSVP : ContentPage
     public string Location { get; set; } = "";
     public string HostName { get; set; } = "";
     public string Description { get; set; } = "";
-    public string Name  {get; set; } = "";
+    public string Name { get; set; } = "";
     public string email { get; set; } = "";
     public string Phone { get; set; } = "";
 
@@ -49,7 +49,7 @@ public partial class RSVP : ContentPage
                 _eventId = id;
                 _ = LoadEventandPrefillAsync(_eventId);
             }
-            
+
         }
     }
 
@@ -61,91 +61,46 @@ public partial class RSVP : ContentPage
 
     private void PrefillUserInfo()
     {
-        //Logged in
-        if(AppSession.isLoggedIn && !AppSession.isGuest)
+        if (AppSession.isLoggedIn && !AppSession.isGuest && AppSession.UserId > 0)
         {
-            Name = AppSession.Name ?? string.Empty;
-            email = AppSession.Email ?? string.Empty;
-            Phone = AppSession.Phone ?? string.Empty;
-        }
-        else
-        {
-            Name = string.Empty;
-            email = string.Empty;
-            Phone = string.Empty;
-        }
-
-        OnPropertyChanged(nameof(Name));
-        OnPropertyChanged(nameof(email));
-        OnPropertyChanged(nameof(Phone));
-    }
-
-    //HardCoded event for testing and fail catch
-    private async Task LoadEventAsync(int eventId)
-    {
-        try
-        {
-            await App.Db.InitAsync();
-
-            var ev = await App.Db.GetEventByIdAsync(eventId);
-
-            if (ev == null)
-            {
-                TitleText = "Event not found";
-                StartUtc = "";
-                Location = "";
-                HostName = "";
-                Description = "";
-                RefreshAll();
-                return;
-            }
-
-            TitleText = ev.Title ?? "";
-            Location = ev.Location ?? "";
-            Description = ev.Description ?? "";
-
-            DateTime? start = DateTime.TryParse(ev.StartUtc, out var s) ? s.ToLocalTime() : (DateTime?)null;
-            DateTime? end = DateTime.TryParse(ev.EndUtc, out var e) ? e.ToLocalTime() : (DateTime?)null;
-
-            WhenText = start.HasValue
-            ? (end.HasValue ? $"{start.Value:ddd, MMM d * h:mm tt} - {end.Value:h:mm tt}" : $"{start.Value:ddd, MMM d * h:mm tt}")
-            : "Time unavailable";
-            RefreshAll();
-        }
-        catch (Exception ex)
-        {
-            TitleText = "Error loading event";
-            Description = ex.Message;
-            RefreshAll();
+            OnPropertyChanged(nameof(IsLoggedInUser));
+            OnPropertyChanged(nameof(IsGuestUser));
+            OnPropertyChanged(nameof(AccountName));
+            OnPropertyChanged(nameof(AccountEmail));
+            OnPropertyChanged(nameof(AccountPhone));
         }
     }
-
-
     private async Task LoadEventandPrefillAsync(int _eventId)
     {
-            await App.Db.InitAsync();
+        await App.Db.InitAsync();
 
-            var ev = await App.Db.GetEventByIdAsync(_eventId);
-            if (ev == null)
-            {
-                TitleText = "Event not found";
-                Description = "No event found with the specified ID.";
-                Location = "";
-                WhenText = "";
-                RefreshAll();
-                return;
-            }
+        var ev = await App.Db.GetEventByIdAsync(_eventId);
+        if (ev == null)
+        {
+            TitleText = "Event not found";
+            Description = "No event found with the specified ID.";
+            Location = "";
+            WhenText = "";
+            RefreshAll();
+            return;
+        }
 
-            TitleText = ev.Title ?? "";
-            Description = ev.Description ?? "";
-            Location = ev.Location ?? "";
+        TitleText = ev.Title ?? "";
+        Description = ev.Description ?? "";
+        Location = ev.Location ?? "";
 
-            DateTime? start = DateTime.TryParse(ev.StartUtc, out var s) ? s.ToLocalTime() : (DateTime?)null;
-            DateTime? end = DateTime.TryParse(ev.EndUtc, out var e) ? e.ToLocalTime() : (DateTime?)null;
+        DateTime? start = DateTime.TryParse(ev.StartUtc, out var s) ? s.ToLocalTime() : (DateTime?)null;
+        DateTime? end = DateTime.TryParse(ev.EndUtc, out var e) ? e.ToLocalTime() : (DateTime?)null;
 
         WhenText = start.HasValue
             ? (end.HasValue ? $"{start.Value:ddd, MMM d * h:mm tt} - {end.Value:h:mm tt}" : $"{start.Value:ddd, MMM d * h:mm tt}")
             : "Time unavailable";
+        PrefillUserInfo();
+        OnPropertyChanged(nameof(IsLoggedInUser));
+        OnPropertyChanged(nameof(IsGuestUser));
+        OnPropertyChanged(nameof(AccountName));
+        OnPropertyChanged(nameof(AccountEmail));
+        OnPropertyChanged(nameof(AccountPhone));
         RefreshAll();
     }
 
@@ -164,64 +119,75 @@ public partial class RSVP : ContentPage
 
     private async void OnSaveClicked(object sender, EventArgs e)
     {
-        //Validate fields
-        if(string.IsNullOrWhiteSpace(Name) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(Phone))
+        if (_eventId <= 0)
         {
-            await DisplayAlert("Error", "Please fill in all required fields (Name, Email, Phone).", "OK");
-            return;
-        }
-        if(_eventId <= 0)
-        {
-            await DisplayAlert("Error", "Invalid Event ID. Cannot save RSVP.", "OK");
+            await DisplayAlert("Error", "Invalid event ID. Cannot save RSVP.", "OK");
             return;
         }
 
-        if(!int.TryParse(PartySizeText, out var partySize) || partySize < 1 || partySize > 20)
+        //Party Size
+        if (!int.TryParse(PartySizeText, out var partySize) || partySize < 1 || partySize > 20)
         {
             await DisplayAlert("Error", "Please enter a valid party size between 1 and 20.", "OK");
             return;
         }
 
-        //Map Picker selection to RSVP status value (0=Accept, 1=Decline, 2=Maybe)
-       int rsvpStatus = SelectedStatusIndex switch
+        //Map picker -> Status
+        // 0=Maybe/Pending, 1=Accept, 2=Decline
+        int status = SelectedStatusIndex switch
         {
-            0 => 1, //Accept -> 1 in DB
-            1 => 2, //Decline -> 2 in DB
-            2 => 3, //Maybe -> 3 in DB
-            _ => 0 //Default/Invalid selection -> 0 (not set) in DB
+            0 => 1, // Accept
+            1 => 2, // Decline
+            2 => 0, // Maybe
+            _ => 0  // Default to Maybe/Pending if something goes wrong
         };
 
-        if(AppSession.isLoggedIn && !AppSession.isGuest)
+        await App.Db.InitAsync();
+
+        //Logged-in: pre-populate and save under userId
+        if(AppSession.isLoggedIn && !AppSession.isGuest && AppSession.UserId > 0)
         {
-            //Save RSVP to DB for logged in user
             var rsvp = new RsvpItem
             {
                 EventId = _eventId,
                 UserId = AppSession.UserId,
-                Status = rsvpStatus,
+                Status = status,
                 PartySize = partySize,
-                Notes = string.IsNullOrWhiteSpace(NotesText) ? null : NotesText.Trim()
+                Notes = NotesText,
+                CreatedUtc = DateTime.UtcNow.ToString("o")
             };
-            try
-            {
-                await App.Db.UpdateRsvpAsync(rsvp);
-                await DisplayAlert("Success", "Your RSVP has been saved.", "OK");
 
-                //Return to Event List
-                await Shell.Current.GoToAsync("//events");
-            }
-            catch (Exception ex)
-            {
-                await DisplayAlert("Error", $"An error occurred while saving your RSVP: {ex.Message}", "OK");
-                return;
-            }
+            await App.Db.UpdateRsvpAsync(rsvp);
+            await DisplayAlert("Success", "Your RSVP has been saved!", "OK");
+            await Shell.Current.GoToAsync("//events");
+            return;
         }
-        else
+
+        //Guest: require guests to fill out fields and save with null userId and guest info
+        if(string.IsNullOrWhiteSpace(GuestName) || 
+            string.IsNullOrWhiteSpace(GuestEmail) || 
+            string.IsNullOrWhiteSpace(GuestPhone))
         {
-            //For guests or not logged in users, we could either prompt them to log in or save the RSVP locally (not implemented here)
-            await DisplayAlert("Notice", "You are not logged in. Your RSVP will not be saved. Please log in to save your RSVP.", "OK");
+            await DisplayAlert("Error", "Please fill out all guest information fields.", "OK");
+            return;
         }
-        await Shell.Current.GoToAsync($"rsvp?EventID={_eventId}");
+
+        var guestRsvp = new RsvpItem
+        {
+            EventId = _eventId,
+            UserId = null, // No user ID for guests
+            GuestName = GuestName.Trim(),
+            GuestEmail = GuestEmail.Trim(),
+            GuestPhone = GuestPhone.Trim(),
+            Status = status,
+            PartySize = partySize,
+            Notes = string.IsNullOrWhiteSpace(NotesText) ? null : NotesText.Trim(),
+            CreatedUtc = DateTime.UtcNow.ToString("o")
+        };
+
+        await App.Db.UpdateRsvpAsync(guestRsvp);
+        await DisplayAlert("Success", "Your RSVP has been saved!", "OK");
+        await Shell.Current.GoToAsync("//events");
     }
 
     private class EventDetailsModel

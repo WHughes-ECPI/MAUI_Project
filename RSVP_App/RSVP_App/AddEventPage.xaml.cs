@@ -76,7 +76,8 @@ public partial class AddEventPage : ContentPage
 		var ev = new EventItem
 		{
 			HostUserId = AppSession.UserId,
-			Title = TitleText.Trim(),
+			HostName = AppSession.Name ?? "Unknown Host",
+            Title = TitleText.Trim(),
 			Description = DescriptionText.Trim(),
 			Location = LocationText.Trim(),
 			StartUtc = startUTC.ToString("o"),
