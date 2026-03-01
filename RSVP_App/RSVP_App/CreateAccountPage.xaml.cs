@@ -1,3 +1,4 @@
+using SQLite;
 using RSVP_App.Models;
 
 namespace RSVP_App;
@@ -50,7 +51,17 @@ public partial class CreateAccountPage : ContentPage
 			CreatedUtc = DateTime.UtcNow.ToString("o")
 		};
 
-		await App.Db.AddUserAsync(user);
+		try
+		{
+			await App.Db.AddUserAsync(user);
+			var check = await App.Db.GetUserByEmailAsync(email);
+			await DisplayAlert("Debug", $"User created with ID: {check?.UserId}", "OK");
+        }
+        catch (SQLiteException ex)
+		{
+			await DisplayAlert("Error", $"Failed to create account: {ex.Message}", "OK");
+			return;
+        }
 
 		await DisplayAlert("Success", "Account created successfully! Please log in.", "OK");
 		await Shell.Current.GoToAsync("..");
